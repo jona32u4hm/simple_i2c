@@ -1,0 +1,19 @@
+read_verilog src/cpu.v
+
+hierarchy -check -top CPU
+
+proc; opt; fsm; opt; memory; opt
+
+techmap; opt
+
+#map flipflops ad logic
+dfflibmap -liberty syn/cmos_cells.lib
+abc -liberty syn/cmos_cells.lib
+
+show CPU
+clean
+
+write_verilog build/cpu_synth.v
+
+#resource use:
+stat -liberty syn/cmos_cells.lib
