@@ -19,6 +19,7 @@ module i2c_generator (
 
 
     reg _nxt_sda_o;
+    reg [1:0] _stage_count, _nxt_stage_count;
 
   
     reg [:0] _state, _next_state;
@@ -28,17 +29,21 @@ module i2c_generator (
 
     always @(*) begin
         _next_state = _state;
+        _scl = 1;
+        _nxt_sda_o = 1;  
         case (_state)
             IDLE: begin
+                _nxt_stage_count = 2'b11;
                 SDA_OE = 1;
                 _nxt_sda_o = 1;    
                 if (start_stb_i) begin
-                    _next_state = SHIFT;
+                    _next_state = START;
                     _nxt_sda_o = 0;
                 end
             end
             START: begin
-
+                _nxt_stage_count = _stage_count +1;
+                _nxt_sda_o = 0;  
             end
             ADDR: begin
                 
@@ -54,6 +59,8 @@ module i2c_generator (
             // not a reset
             _state <= _next_state;
             SDA_OUT <= _nxt_sda_o;
+            SCL <= _nxt_stage_count[1];
+            _stage_count <= _nxt_stage_count;
         end
     end
 
