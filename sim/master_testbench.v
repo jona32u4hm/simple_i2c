@@ -4,7 +4,7 @@
 
 
 `include "src/i2c_generator.v"
-`include "sim/tester.v"
+`include "sim/master_tester.v"
 
 
 `timescale 1ns / 1ps

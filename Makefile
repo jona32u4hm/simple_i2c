@@ -1,5 +1,6 @@
 
 TB = sim/testbench.v
+MTB = sim/master_testbench.v
 OUT = build/output.out
 
 
@@ -12,6 +13,11 @@ all: $(TB) syn/synth.ys
 simulate:
 	@mkdir -p build
 	iverilog -o $(OUT) $(TB)
+	vvp $(OUT)
+	gtkwave i2c_simulation.vcd
+simulate_master:
+	@mkdir -p build
+	iverilog -o $(OUT) $(MTB)
 	vvp $(OUT)
 	gtkwave i2c_simulation.vcd
 

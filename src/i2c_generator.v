@@ -1,16 +1,15 @@
 module i2c_generator (
-    // Reloj y Reinicio
     input          CLK,
-    input          RST,      // RST=1 para funcionamiento normal, 0 para reinicio
+    input          RST,      // RST=1 normal funstion, 0 restart
 
-    // Interfaz con el CPU
+    // CPU
     input          RNW,
     input   [6:0]  I2C_ADDR,
     input   [15:0] WR_DATA, //write data from cpu to I2C
     output reg [15:0] RD_DATA, //read data from I2C to cpu
     input          START_STB,
 
-    // Interfaz Física I2C / Probador
+    // I2C 
     output reg        SCL,
     output reg        SDA_OUT,
     output reg        SDA_OE,
@@ -86,6 +85,7 @@ module i2c_generator (
             // ------------------------------------------------------------------WRITE LOGIC ---------------------------------------------------------------
             WRITE_HIGH: begin
                 _nxt_stage_count = _stage_count +1;
+                if (_stage_count == 0) SDA_OE = 0;
                 if (_stage_count[1:0] == 2'b00)begin
                     _nxt_sda_o = _shift[7];
                     _shifted = {_shift[6:0], 1'b1};
@@ -111,6 +111,7 @@ module i2c_generator (
             end
             WRITE_LOW: begin
                 _nxt_stage_count = _stage_count +1;
+                if (_stage_count == 0) SDA_OE = 0;
                 if (_stage_count[1:0] == 2'b00)begin
                     _nxt_sda_o = _shift[7];
                     _shifted = {_shift[6:0], 1'b1};
@@ -122,8 +123,8 @@ module i2c_generator (
             WAIT_ACK: begin
                 _nxt_stage_count = _stage_count +1;
                 if (_stage_count != 0) begin
-                    SDA_OE = 0;
-                    if (_stage_count[1:0] == 2'b11) begin 
+                    if (_stage_count[2:0] != 3'd5 && _stage_count[2:0] != 3'd6) SDA_OE = 0; //exclude last two cycles
+                    if (_stage_count[2:0] == 3'b110) begin 
                         _nxt_stage_count = 5'b11111;
                         _nxt_sda_o = 1;    
                         _next_state = IDLE;  //STOP
