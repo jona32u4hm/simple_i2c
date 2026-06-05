@@ -21,24 +21,33 @@ module i2c_generator (
     reg _nxt_sda_o;
     reg [4:0] _stage_count, _nxt_stage_count;
     reg [7:0] _shift, _shifted;
-
+    reg [15:0]_nxt_rd_data;
   
     reg [:0] _state, _next_state;
-    localparam  IDLE        = 
-                START       = 
-                ADDR        = 
-                ACK         =
+    localparam  IDLE        = 12'b1
+                START       = 12'b10
+                ADDR        = 12'b100
+                ACK         = 12'b1000
+                WRITE_HIGH  = 12'b10000
+                WRITE_ACK   = 12'b100000
+                WRITE_LOW   = 12'b1000000
+                WAIT_ACK    = 12'b10000000
+                READ_HIGH   = 12'b100000000
+                READ_ACK    = 12'b1000000000
+                READ_LOW    = 12'b10000000000
+                LAST_ACK    = 12'b100000000000
 
     always @(*) begin
         SDA_OE = 1;
         _next_state = _state;
         _nxt_sda_o = SDA_OUT;  
         _shifted = _shift;
+        _nxt_rd_data = RD_DATA;
         case (_state)
             IDLE: begin
                 _nxt_stage_count = 5'b11111;
                 _nxt_sda_o = 1;    
-                if (start_stb_i) begin
+                if (START_STB) begin
                     _next_state = START;
                     _nxt_sda_o = 0;
                 end
@@ -88,7 +97,7 @@ module i2c_generator (
                 _nxt_stage_count = _stage_count +1;
                 if (_stage_count != 0) begin
                     SDA_OE = 0;
-                    if (_stage_count[1:0] == 2'b10 && SDA_IN == 0) begin //if NACK
+                    if (_stage_count[1:0] == 2'b10 && SDA_IN == 1) begin //if NACK
                         _next_state = IDLE; 
                     end 
                     if (_stage_count[1:0] == 2'b11) begin
@@ -129,8 +138,8 @@ module i2c_generator (
                 end
             end
             READ_ACK: begin
-                _nxt_sda_o = 1; //ACK 
-                RD_DATA = _shift;
+                _nxt_sda_o = 0; //ACK 
+                _nxt_rd_data = {_shift, 8'b0000000};
                 _nxt_stage_count = _stage_count +1;
                 if (_stage_count == 0) SDA_OE = 0;
                 else begin
@@ -152,8 +161,8 @@ module i2c_generator (
                 end
             end
             LAST_ACK: begin
-                _nxt_sda_o = 1; //ACK 
-                RD_DATA = _shift;
+                _nxt_sda_o = 0; //ACK 
+                _nxt_rd_data = {RD_DATA[15:8], _shift};
                 _nxt_stage_count = _stage_count +1;
                 if (_stage_count == 0) SDA_OE = 0;
                 else begin
@@ -169,6 +178,12 @@ module i2c_generator (
     always @(posedge CLK or negedge RST) begin
         if (!RST) begin
             //reset
+            _state <= IDLE;
+            SDA_OUT <= 1'b1;
+            SCL <= 1'b1;
+            SDA_OE <= 1'b0;
+            _stage_count <= 5'b0;
+            _shift <= 8'b0;
         end else begin
             // not a reset
             _state <= _next_state;
@@ -176,6 +191,7 @@ module i2c_generator (
             SCL <= _nxt_stage_count[1];
             _stage_count <= _nxt_stage_count;
             _shift <= _shifted;
+            RD_DATA <= _nxt_rd_data;
         end
     end
 
