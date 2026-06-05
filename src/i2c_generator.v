@@ -23,19 +23,19 @@ module i2c_generator (
     reg [7:0] _shift, _shifted;
     reg [15:0]_nxt_rd_data;
   
-    reg [:0] _state, _next_state;
-    localparam  IDLE        = 12'b1
-                START       = 12'b10
-                ADDR        = 12'b100
-                ACK         = 12'b1000
-                WRITE_HIGH  = 12'b10000
-                WRITE_ACK   = 12'b100000
-                WRITE_LOW   = 12'b1000000
-                WAIT_ACK    = 12'b10000000
-                READ_HIGH   = 12'b100000000
-                READ_ACK    = 12'b1000000000
-                READ_LOW    = 12'b10000000000
-                LAST_ACK    = 12'b100000000000
+    reg [11:0] _state, _next_state;
+    localparam  IDLE        = 12'b1,
+                START       = 12'b10,
+                ADDR        = 12'b100,
+                ACK         = 12'b1000,
+                WRITE_HIGH  = 12'b10000,
+                WRITE_ACK   = 12'b100000,
+                WRITE_LOW   = 12'b1000000,
+                WAIT_ACK    = 12'b10000000,
+                READ_HIGH   = 12'b100000000,
+                READ_ACK    = 12'b1000000000,
+                READ_LOW    = 12'b10000000000,
+                LAST_ACK    = 12'b100000000000;
 
     always @(*) begin
         SDA_OE = 1;
@@ -62,9 +62,9 @@ module i2c_generator (
                 _nxt_stage_count = _stage_count +1;
                 if (_stage_count[1:0] == 2'b00)begin
                     _nxt_sda_o = _shift[7];
-                    _shifted = {shift_reg[6:0], 1'b1};
+                    _shifted = {_shift[6:0], 1'b1};
                 end
-                if (_stage_count[4:2] == 3'b111)begin
+                if (_stage_count[4:0] == 5'b11111)begin
                     _next_state = ACK;
                 end
             end
@@ -72,8 +72,9 @@ module i2c_generator (
                 _nxt_stage_count = _stage_count +1;
                 if (_stage_count != 0) begin
                     SDA_OE = 0;
-                    if (_stage_count[1:0] == 2'b10 && SDA_IN == 0) begin //if NACK
+                    if (_stage_count[1:0] == 2'b10 && SDA_IN == 1) begin //if NACK
                         _next_state = IDLE; 
+                        _nxt_sda_o = 1;    
                     end 
                     if (_stage_count[1:0] == 2'b11) begin
                         _next_state = (RNW)? READ_HIGH : WRITE_HIGH;
@@ -87,9 +88,9 @@ module i2c_generator (
                 _nxt_stage_count = _stage_count +1;
                 if (_stage_count[1:0] == 2'b00)begin
                     _nxt_sda_o = _shift[7];
-                    _shifted = {shift_reg[6:0], 1'b1};
+                    _shifted = {_shift[6:0], 1'b1};
                 end
-                if (_stage_count[4:2] == 3'b111)begin
+                if (_stage_count[4:0] == 5'b11111)begin
                     _next_state = WRITE_ACK;
                 end
             end
@@ -99,6 +100,7 @@ module i2c_generator (
                     SDA_OE = 0;
                     if (_stage_count[1:0] == 2'b10 && SDA_IN == 1) begin //if NACK
                         _next_state = IDLE; 
+                        _nxt_sda_o = 1;    
                     end 
                     if (_stage_count[1:0] == 2'b11) begin
                         _next_state = WRITE_LOW;
@@ -111,9 +113,9 @@ module i2c_generator (
                 _nxt_stage_count = _stage_count +1;
                 if (_stage_count[1:0] == 2'b00)begin
                     _nxt_sda_o = _shift[7];
-                    _shifted = {shift_reg[6:0], 1'b1};
+                    _shifted = {_shift[6:0], 1'b1};
                 end
-                if (_stage_count[4:2] == 3'b111)begin
+                if (_stage_count[4:0] == 5'b11111)begin
                     _next_state = WAIT_ACK;
                 end
             end
@@ -121,7 +123,9 @@ module i2c_generator (
                 _nxt_stage_count = _stage_count +1;
                 if (_stage_count != 0) begin
                     SDA_OE = 0;
-                    if (_stage_count[1:0] == 2'b10) begin 
+                    if (_stage_count[1:0] == 2'b11) begin 
+                        _nxt_stage_count = 5'b11111;
+                        _nxt_sda_o = 1;    
                         _next_state = IDLE;  //STOP
                     end 
                 end
@@ -129,11 +133,11 @@ module i2c_generator (
             // ------------------------------------------------------------------READ LOGIC ---------------------------------------------------------------
             READ_HIGH: begin
                 _nxt_stage_count = _stage_count +1;
-                if (_stage_count != 0) SDA_OE = 0;
+                SDA_OE = 0;
                 if (_stage_count[1:0] == 2'b10)begin
-                    _shifted = {shift_reg[6:0], SDA_IN};
+                    _shifted = {_shift[6:0], SDA_IN};
                 end
-                if (_stage_count[4:2] == 3'b111)begin
+                if (_stage_count[4:0] == 5'b11111)begin
                     _next_state = READ_ACK;
                 end
             end
@@ -143,31 +147,33 @@ module i2c_generator (
                 _nxt_stage_count = _stage_count +1;
                 if (_stage_count == 0) SDA_OE = 0;
                 else begin
-                    if (_stage_count[2:0] == 2'b11) begin
+                    if (_stage_count[2:0] == 3'b100) begin // Extended one more cycle to keep SDA_OE enabled
                         _next_state = READ_LOW;
-                        _nxt_stage_count = 5'b00000;
+                        _nxt_stage_count = 5'b00001;
                     end
                 end
             end            
             READ_LOW: begin
-                if (_stage_count != 0) SDA_OE = 0;
+                SDA_OE = 0;
                 _nxt_stage_count = _stage_count +1;
                 SDA_OE = 0;
                 if (_stage_count[1:0] == 2'b10)begin
-                    _shifted = {shift_reg[6:0], SDA_IN};
+                    _shifted = {_shift[6:0], SDA_IN};
                 end
-                if (_stage_count[4:2] == 3'b111)begin
+                if (_stage_count[4:0] == 5'b11111)begin
                     _next_state = LAST_ACK;
                 end
             end
             LAST_ACK: begin
-                _nxt_sda_o = 0; //ACK 
+                _nxt_sda_o = 0; //ACK
                 _nxt_rd_data = {RD_DATA[15:8], _shift};
                 _nxt_stage_count = _stage_count +1;
                 if (_stage_count == 0) SDA_OE = 0;
                 else begin
                     if (_stage_count[2:0] == 3'b110) begin
                         _next_state = IDLE;
+                        _nxt_stage_count = 5'b11111;
+                        _nxt_sda_o = 1;    
                     end
                 end
             end

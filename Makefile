@@ -15,12 +15,6 @@ simulate:
 	vvp $(OUT)
 	gtkwave i2c_simulation.vcd
 
-testrom2:
-	@mkdir -p build
-	iverilog -o $(OUT) $(TB) -Dtestrom2
-	vvp $(OUT)
-	gtkwave i2c_simulation.vcd
-
 
 synthesize:
 	@mkdir -p build
