@@ -51,13 +51,11 @@ module tester (
         RNW        = 0;               // 0 = Write
         START_STB  = 1;               // Assert start strobe
         
-        repeat (2) @(posedge CLK);
+        @(posedge CLK);
         #1;
         START_STB  = 0;               // De-assert strobe after 1 clock cycle
 
         // Wait for the transmission to finish.
-        // (Adjust this delay based on your actual I2C clock speed divider)
-        // For standard 100kHz I2C, a 2-byte frame takes roughly 200,000ns.
         #2500; 
 
         // Verify if slave captured the data correctly
