@@ -1,4 +1,4 @@
-module i2c_reciever (
+module i2c_receiver (
     input          CLK,
     input          RST,      // RST=1 normal funstion, 0 restart
 

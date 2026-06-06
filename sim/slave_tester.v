@@ -24,7 +24,6 @@ module tester (
     initial begin
         // --- Step 1: Initialization & Reset ---
         RST      = 0;  // Trigger active-low reset
-        CLK      = 0;
         I2C_ADDR = 7'h5A; // Configure the Receiver module's target address
         RD_DATA  = 16'hABCD;
         SCL      = 1;
@@ -39,11 +38,10 @@ module tester (
         $monitor("At time %0t: SDA_IN (ACK from Receiver) = %b | WR_DATA = %h", $time, SDA_IN, WR_DATA);
 
         // --- Step 2: Send I2C START Condition ---
-        // SCL stays High while SDA falls low
         #20;
         SDA_OUT = 0; 
         #20;
-        SCL = 0;     // Drop SCL to begin formatting data frames
+        SCL = 0;     
         #20;
 
         // --- Step 3: Send Matching 7-bit Address (7'h5A -> binary 1011010) ---
@@ -59,7 +57,6 @@ module tester (
         send_i2c_bit(0); 
 
         // --- Step 5: Wait for ACK Phase ---
-        // Release the data line so the receiver can assert its ACK (SDA_IN -> 0)
         SDA_OUT = 1; 
         #40 SCL = 1;
         #20;
