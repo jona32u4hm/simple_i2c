@@ -26,12 +26,12 @@ module i2c_receiver (
                 ADDR        = 12'b10,
                 ACK         = 12'b100,
                 WRITE_HIGH  = 12'b1000,
-                WRITE_ACK   = 12'b10000,
-                WRITE_LOW   = 12'b100000,
-                READ_HIGH   = 12'b1000000,
-                READ_ACK    = 12'b10000000,
-                READ_LOW    = 12'b100000000,
-                LAST_ACK    = 12'b1000000000;
+                WRITE_ACK   = 12'b1_0000,
+                WRITE_LOW   = 12'b10_0000,
+                READ_HIGH   = 12'b100_0000,
+                READ_ACK    = 12'b1000_0000,
+                READ_LOW    = 12'b1_0000_0000,
+                LAST_ACK    = 12'b10_0000_0000;
 
 
 reg scl_past, sda_past;
@@ -64,11 +64,7 @@ wire start = (SDA_OUT == 0 && sda_past == 1 && scl_high);
         _nxt_count = _count;
         case (_state)
             IDLE: begin
-                _nxt_sda_o = 1;    
-                if (start) begin
-                    _next_state = ADDR;
-                    _nxt_count = 0;
-                end
+                _nxt_sda_o = 1;  
             end // ------------------------------- ADDR LOGIC -----------------------
             ADDR: begin
                 if (scl_rising_edge)begin
@@ -158,7 +154,11 @@ wire start = (SDA_OUT == 0 && sda_past == 1 && scl_high);
                 _nxt_sda_o = 1;   
             end
         endcase
-        if (stop) _next_state = IDLE;
+        if (stop) _next_state = IDLE;  
+        if (start) begin
+            _next_state = ADDR;
+            _nxt_count = 0;
+        end
     end
 
 

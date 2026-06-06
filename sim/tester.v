@@ -90,6 +90,67 @@ module tester (
             $display("[TESTER] ERROR: Master data mismatch. Expected 16'hABCD, Got 16'h%h", MRD_DATA);
         end
 
+        // ============================================================================================================================
+        // ADDITIONAL TESTS
+        // ============================================================================================================================
+
+
+
+        // ==========================================
+        // ADDITIONAL TEST 1: Back-to-Back Transactions
+        // ==========================================
+        $display("[TESTER] Starting Back-to-Back Test...");
+        I2C_ADDR   = 7'd83;          // Target Slave Address      
+        MWR_DATA   = 16'h1111;        
+        RNW        = 0;               
+        START_STB  = 1;               
+        @(posedge CLK); #1; START_STB = 0;
+        
+        #2250; // Wait for transaction to end
+
+        // Immediate next transaction (No idle rest)
+        I2C_ADDR   = 7'd83;          // Target Slave Address     
+        MWR_DATA   = 16'h2222;        
+        RNW        = 0;               
+        START_STB  = 1;               
+        @(posedge CLK); #1; START_STB = 0;
+        
+        #2250; 
+
+        // Immediate next transaction (No idle rest and different address)
+        I2C_ADDR   = 7'd11;          
+        MWR_DATA   = 16'h2222;        
+        RNW        = 0;               
+        START_STB  = 1;               
+        @(posedge CLK); #1; START_STB = 0;
+        
+        #2500; 
+        
+        // ==========================================
+        // ADDITIONAL TEST 2: Mid-Transaction Reset
+        // ==========================================
+        $display("[TESTER] Starting Mid-Transaction Reset Test...");
+        I2C_ADDR   = 7'd83;          // Target Slave Address
+        MWR_DATA   = 16'h9999;
+        RNW        = 0;
+        START_STB  = 1;
+        @(posedge CLK); #1; START_STB = 0;
+
+        #500; // Wait until it's halfway through transmitting
+        $display("[TESTER] CRITICAL: Asserting Reset Mid-Stream!");
+        MRST = 1; 
+        SRST = 1;
+        repeat (3) @(posedge CLK);
+        #1;
+        MRST = 0;
+        SRST = 0;
+        
+        // Verify state machine returned to 0 safely
+        // (Add your DUT state check here if accessible)
+
+
+
+
         // End Simulation
         repeat (20) @(posedge CLK);
         $display("[TESTER] Simulation finished cleanly.");
