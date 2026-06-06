@@ -50,7 +50,7 @@ module i2c_reciever (
             ADDR: begin
                 _nxt_stage_count = _stage_count +1;
                 if (_stage_count[1:0] == 2'b10)begin
-                    _shifted = {_shift[6:0], SDA_IN};
+                    _shifted = {_shift[6:0], SDA_OUT};
                 end
                 if (_stage_count[4:0] == 5'b11111)begin
                     if (_shift[7:1] == I2C_ADDR) _next_state = ACK;
@@ -84,7 +84,7 @@ module i2c_reciever (
             end
             READ_ACK: begin
                 _nxt_stage_count = _stage_count +1;
-                if (_stage_count[1:0] == 2'b10 && SDA_IN == 1) begin //if NACK
+                if (_stage_count[1:0] == 2'b10 && SDA_OUT == 1) begin //if NACK
                     _next_state = IDLE; 
                     _nxt_sda_o = 1;    
                 end 
@@ -101,17 +101,15 @@ module i2c_reciever (
                     _shifted = {_shift[6:0], 1'b1};
                 end
                 if (_stage_count[4:0] == 5'b11111)begin
-                    _next_state = WAIT_ACK;
                     _nxt_stage_count = 5'b11111;
-                    _next_state = IDLE;  // according to specification, only two bytes are sent and no more is required.
+                    _next_state = IDLE;  // according to custom specification, only two bytes are sent and no more is required.
                 end
             end
             // ------------------------------------------------------------------READ LOGIC ---------------------------------------------------------------
             WRITE_HIGH: begin
                 _nxt_stage_count = _stage_count +1;
-                SDA_OE = 0;
                 if (_stage_count[1:0] == 2'b10)begin
-                    _shifted = {_shift[6:0], SDA_IN};
+                    _shifted = {_shift[6:0], SDA_OUT};
                 end
                 if (_stage_count[4:0] == 5'b11111)begin
                     _next_state = READ_ACK;
@@ -121,20 +119,15 @@ module i2c_reciever (
                 _nxt_sda_o = 0; //ACK 
                 _nxt_rd_data = {_shift, 8'b0000000};
                 _nxt_stage_count = _stage_count +1;
-                if (_stage_count == 0) SDA_OE = 0;
-                else begin
-                    if (_stage_count[2:0] == 3'b100) begin // Extended one more cycle to keep SDA_OE enabled
-                        _next_state = READ_LOW;
-                        _nxt_stage_count = 5'b00001;
-                    end
+                if (_stage_count[2:0] == 3'b100) begin 
+                    _next_state = READ_LOW;
+                    _nxt_stage_count = 5'b00001;
                 end
             end            
             WRITE_LOW: begin
-                SDA_OE = 0;
                 _nxt_stage_count = _stage_count +1;
-                SDA_OE = 0;
                 if (_stage_count[1:0] == 2'b10)begin
-                    _shifted = {_shift[6:0], SDA_IN};
+                    _shifted = {_shift[6:0], SDA_OUT};
                 end
                 if (_stage_count[4:0] == 5'b11111)begin
                     _next_state = LAST_ACK;
@@ -144,13 +137,10 @@ module i2c_reciever (
                 _nxt_sda_o = 0; //ACK
                 _nxt_rd_data = {RD_DATA[15:8], _shift};
                 _nxt_stage_count = _stage_count +1;
-                if (_stage_count == 0) SDA_OE = 0;
-                else begin
-                    if (_stage_count[2:0] == 3'b110) begin
-                        _next_state = IDLE;
-                        _nxt_stage_count = 5'b11111;
-                        _nxt_sda_o = 1;    
-                    end
+                if (_stage_count[2:0] == 3'b110) begin
+                    _next_state = IDLE;
+                    _nxt_stage_count = 5'b11111;
+                    _nxt_sda_o = 1;    
                 end
             end
         endcase
@@ -161,9 +151,8 @@ module i2c_reciever (
         if (!RST) begin
             //reset
             _state <= IDLE;
-            SDA_OUT <= 1'b1;
+            SDA_IN <= 1'b1;
             SCL <= 1'b1;
-            SDA_OE <= 1'b0;
             _stage_count <= 5'b0;
             _shift <= 8'b0;
         end else begin
