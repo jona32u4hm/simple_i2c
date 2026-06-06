@@ -36,9 +36,11 @@ module i2c_receiver (
 
 reg scl_past, sda_past;
 
-always @(posedge CLK or negedge RST) begin
+always @(posedge CLK) begin
     if (!RST) begin
+        // synchronous reset (active low)
         scl_past <= 1'b1;
+        sda_past <= 1'b1;
     end else begin
         scl_past <= SCL;
         sda_past <= SDA_OUT;
@@ -51,6 +53,7 @@ wire scl_rising_edge  = (SCL == 1 && scl_past == 0);
 wire scl_low  = (SCL == 0 && scl_past == 0);
 wire scl_high = (SCL == 1 && scl_past == 1);
 wire stop = (SDA_OUT == 1 && sda_past == 0 && scl_high);
+wire start = (SDA_OUT == 0 && sda_past == 1 && scl_high);
 
 
     always @(*) begin
@@ -62,7 +65,7 @@ wire stop = (SDA_OUT == 1 && sda_past == 0 && scl_high);
         case (_state)
             IDLE: begin
                 _nxt_sda_o = 1;    
-                if (SDA_OUT == 0 && scl_high) begin
+                if (start) begin
                     _next_state = ADDR;
                     _nxt_count = 0;
                 end
@@ -159,13 +162,14 @@ wire stop = (SDA_OUT == 1 && sda_past == 0 && scl_high);
     end
 
 
-    always @(posedge CLK or negedge RST) begin
+    always @(posedge CLK) begin
         if (!RST) begin
-            //reset
+            // synchronous reset (active low)
             _state <= IDLE;
             SDA_IN <= 1'b1;
-            _count <= 5'b0;
+            _count <= 4'b0;
             _shift <= 8'b0;
+            WR_DATA <= 16'b0;
         end else begin
             // not a reset
             _state <= _next_state;

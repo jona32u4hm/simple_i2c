@@ -46,7 +46,7 @@ module tester (
         // TRANSACTION 1: Master Writes to Slave
         // ==========================================
         $display("[TESTER] Starting I2C Write Transaction...");
-        I2C_ADDR   = 7'h5A;          // Target Slave Address
+        I2C_ADDR   = 7'd83;          // Target Slave Address
         MWR_DATA   = 16'hCAFE;        // Data payload to write
         RNW        = 0;               // 0 = Write
         START_STB  = 1;               // Assert start strobe
@@ -73,7 +73,7 @@ module tester (
         // TRANSACTION 2: Master Reads from Slave
         // ==========================================
         $display("[TESTER] Starting I2C Read Transaction...");
-        I2C_ADDR   = 7'h5A;          // Target Slave Address
+        I2C_ADDR   = 7'd83;          // Target Slave Address
         RNW        = 1;               // 1 = Read
         START_STB  = 1;
         

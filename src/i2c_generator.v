@@ -40,6 +40,7 @@ module i2c_generator (
         SDA_OE = 1;
         _next_state = _state;
         _nxt_sda_o = SDA_OUT;  
+        _nxt_stage_count = _stage_count;
         _shifted = _shift;
         _nxt_rd_data = RD_DATA;
         case (_state)
@@ -182,15 +183,16 @@ module i2c_generator (
     end
 
 
-    always @(posedge CLK or negedge RST) begin
+    always @(posedge CLK) begin
         if (!RST) begin
-            //reset
+            // synchronous reset (active low)
             _state <= IDLE;
             SDA_OUT <= 1'b1;
             SCL <= 1'b1;
             SDA_OE <= 1'b0;
             _stage_count <= 5'b0;
             _shift <= 8'b0;
+            RD_DATA <= 16'b0;
         end else begin
             // not a reset
             _state <= _next_state;

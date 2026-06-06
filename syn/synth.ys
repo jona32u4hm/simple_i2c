@@ -1,19 +1,22 @@
-read_verilog src/cpu.v
+read_verilog src/i2c_generator.v
+read_verilog src/i2c_receiver.v
+read_verilog src/top.v
 
-hierarchy -check -top CPU
+# Point synthesis directly to our wrapper
+hierarchy -check -top top
 
 proc; opt; fsm; opt; memory; opt
 
 techmap; opt
 
-#map flipflops ad logic
+# Map flipflops and logic
 dfflibmap -liberty syn/cmos_cells.lib
 abc -liberty syn/cmos_cells.lib
 
-show CPU
+show top
 clean
 
-write_verilog build/cpu_synth.v
+write_verilog build/i2c_synth.v
 
-#resource use:
+# Resource use:
 stat -liberty syn/cmos_cells.lib
