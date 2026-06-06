@@ -140,6 +140,7 @@ wire stop = (SDA_OUT == 1 && sda_past == 0 && scl_high);
                 end
             end            
             WRITE_LOW: begin
+                _nxt_sda_o = 1;
                 if (scl_rising_edge)begin
                     _shifted = {_shift[6:0], SDA_OUT};
                     _nxt_count = _count + 1;
@@ -148,9 +149,8 @@ wire stop = (SDA_OUT == 1 && sda_past == 0 && scl_high);
                     _next_state = LAST_ACK;
                 end
             end
-            LAST_ACK: begin
-                _nxt_sda_o = 0; //ACK
-                _nxt_rd_data = {RD_DATA[15:8], _shift};
+            LAST_ACK: begin // No ACK required according to custom specification
+                _nxt_rd_data = {WR_DATA[15:8], _shift};
                 _next_state = IDLE;
                 _nxt_sda_o = 1;   
             end
