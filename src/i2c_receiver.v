@@ -95,7 +95,7 @@ wire stop = (SDA_OUT == 1 && sda_past == 0 && scl_high);
                     _shifted = {_shift[6:0], 1'b1};
                     _nxt_count = _count + 1;
                 end
-                if (_count == 3'b111 && scl_falling_edge)begin
+                if (_count[3] && scl_falling_edge)begin
                     _next_state = READ_ACK;
                 end
             end
@@ -116,7 +116,7 @@ wire stop = (SDA_OUT == 1 && sda_past == 0 && scl_high);
                     _shifted = {_shift[6:0], 1'b1};
                     _nxt_count = _count + 1;
                 end
-                if (_count == 3'b111 && scl_falling_edge)begin
+                if (_count[3]&& scl_falling_edge)begin
                     _next_state = IDLE;  // according to custom specification, only two bytes are sent and no more is required.
                 end
             end

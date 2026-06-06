@@ -135,6 +135,83 @@ module tester (
 
         #100;
 
+
+
+        $display("At time %0t: --- Starting I2C Receiver Test Environment ---", $time);
+        $monitor("At time %0t: SDA_IN (ACK from Receiver) = %b | WR_DATA = %h", $time, SDA_IN, WR_DATA);
+
+        // --- Step 2: Send I2C START Condition ---
+        #20;
+        SDA_OUT = 0; 
+        #20;
+        SCL = 0;     
+        #20;
+
+        // --- Step 3: Send Matching 7-bit Address (7'h5A -> binary 1011010) ---
+        send_i2c_bit(1); // Bit 6
+        send_i2c_bit(0); // Bit 5
+        send_i2c_bit(1); // Bit 4
+        send_i2c_bit(1); // Bit 3
+        send_i2c_bit(0); // Bit 2
+        send_i2c_bit(1); // Bit 1
+        send_i2c_bit(0); // Bit 0
+
+        // --- Step 4: Send the Write Bit (1 = Read) ---
+        send_i2c_bit(1); 
+
+        // --- Step 5: Wait for ACK Phase ---
+        SDA_OUT = 1; 
+        #40 SCL = 1;
+        #20;
+        
+        if (SDA_IN == 0) begin
+            $display("At time %0t: SUCCESS - Device generated an ACK for matching Address!", $time);
+        end else begin
+            $display("At time %0t: WARNING - Device did not ACK address match.", $time);
+        end
+        
+        #20 SCL = 0;
+
+
+// --- Step 6: Receive a Byte from the Receiver Module ---
+        $display("At time %0t: --- Starting Byte Reception ---", $time);
+        
+
+
+        // 2. Clock in 8 bits of data (MSB first)
+        // We'll use a small loop to read all 8 bits from SDA_IN
+        begin: rx_byte_loop
+            integer i;
+            reg [7:0] rx_byte;
+            
+            rx_byte = 8'b0;
+            
+            for (i = 7; i >= 0; i = i - 1) begin
+                #40 SCL = 1;          // Pull SCL High
+                #20;                  // Wait for data to stabilize
+                rx_byte[i] = SDA_IN;  // Sample the bit
+                #20;                  // Complete the high period
+                SCL = 0;              // Pull SCL Low
+            end
+            
+            $display("At time %0t: SUCCESS - Received Byte: 8'h%h (8'b%b)", $time, rx_byte, rx_byte);
+        end
+
+        // --- Step 7: Send NACK to the Receiver (Master signals end of read) ---
+
+        SDA_OUT = 1;   // 1 = NACK (0 would be ACK)
+        #20;
+        
+        #40 SCL = 1;   // Clock the NACK bit
+        #40 SCL = 0;
+        #20;
+
+
+
+
+
+
+        #100;
         // Finish up simulation
         $display("At time %0t: --- Test Script Execution Complete ---", $time);
         $finish;
