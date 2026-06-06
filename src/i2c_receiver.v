@@ -17,7 +17,7 @@ module i2c_receiver (
 
 
     reg _nxt_sda_o;
-    reg [2:0] _count, _nxt_count;
+    reg [3:0] _count, _nxt_count;
     reg [7:0] _shift, _shifted;
     reg [15:0]_nxt_rd_data;
   
@@ -53,9 +53,10 @@ wire scl_high= (SCL == 1 && scl_past == 1);
 
     always @(*) begin
         _next_state = _state;
-        _nxt_sda_o = SDA_OUT;  
+        _nxt_sda_o = SDA_IN;  
         _shifted = _shift;
         _nxt_rd_data = RD_DATA;
+        _nxt_count = _count;
         case (_state)
             IDLE: begin
                 _nxt_sda_o = 1;    
@@ -69,7 +70,7 @@ wire scl_high= (SCL == 1 && scl_past == 1);
                     _shifted = {_shift[6:0], SDA_OUT};
                     _nxt_count = _count + 1;
                 end
-                if (_count == 3'b111 && scl_low)begin
+                if (_count[3] == 1 && scl_falling_edge)begin
                     if (_shift[7:1] == I2C_ADDR) _next_state = ACK;
                     else _next_state = IDLE;
                 end
