@@ -68,6 +68,46 @@ module tester (
         end
         
         #20 SCL = 0;
+
+        // ====================================================================
+        // --- Step 6: Send Data Byte to Receiver (e.g., 8'hA5 -> 10100101) ---
+        // ====================================================================
+        $display("At time %0t: --- Sending Data Byte: 8'hA5 ---", $time);
+        
+        // We will transmit the byte 8'hA5 (MSB first: 1, 0, 1, 0, 0, 1, 0, 1)
+        send_i2c_bit(1); // Bit 7
+        send_i2c_bit(0); // Bit 6
+        send_i2c_bit(1); // Bit 5
+        send_i2c_bit(0); // Bit 4
+        send_i2c_bit(0); // Bit 3
+        send_i2c_bit(1); // Bit 2
+        send_i2c_bit(0); // Bit 1
+        send_i2c_bit(1); // Bit 0
+
+        // --- Step 7: Wait for Data ACK Phase ---
+        SDA_OUT = 1;      // Release the SDA line so the receiver can drive it
+        #40 SCL = 1;      // Pull SCL High to sample the ACK
+        #20;
+        
+        if (SDA_IN == 0) begin
+            $display("At time %0t: SUCCESS - Device generated an ACK for the Data Byte!", $time);
+        end else begin
+            $display("At time %0t: WARNING - Device did not ACK the Data Byte.", $time);
+        end
+        
+        #20 SCL = 0;      // Pull SCL Low to finalize the bit cycle
+        #40;
+
+        // --- Step 8: Send I2C STOP Condition ---
+        SDA_OUT = 0;      // Ensure SDA is low while SCL is low
+        #20;
+        SCL = 1;          // Pull SCL High
+        #20;
+        SDA_OUT = 1;      // Transition SDA Low -> High while SCL is High (STOP)
+        #40;
+
+
+
         #100;
 
         // Finish up simulation

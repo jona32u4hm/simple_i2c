@@ -34,28 +34,30 @@ module i2c_receiver (
                 LAST_ACK    = 12'b1000000000;
 
 
-reg scl_past;
+reg scl_past, sda_past;
 
 always @(posedge CLK or negedge RST) begin
     if (!RST) begin
         scl_past <= 1'b1;
     end else begin
         scl_past <= SCL;
+        sda_past <= SDA_OUT;
     end
 end
 // Detects the exact CPU cycle SCL drops low
 wire scl_falling_edge = (SCL == 0 && scl_past == 1);
 // Detects the exact CPU cycle SCL rises high
 wire scl_rising_edge  = (SCL == 1 && scl_past == 0);
-wire scl_low = (SCL == 0 && scl_past == 0);
-wire scl_high= (SCL == 1 && scl_past == 1);
+wire scl_low  = (SCL == 0 && scl_past == 0);
+wire scl_high = (SCL == 1 && scl_past == 1);
+wire stop = (SDA_OUT == 1 && sda_past == 0 && scl_high);
 
 
     always @(*) begin
         _next_state = _state;
         _nxt_sda_o = SDA_IN;  
         _shifted = _shift;
-        _nxt_rd_data = RD_DATA;
+        _nxt_rd_data = WR_DATA;
         _nxt_count = _count;
         case (_state)
             IDLE: begin
@@ -120,18 +122,19 @@ wire scl_high= (SCL == 1 && scl_past == 1);
             end
             // ------------------------------------------------------------------READ LOGIC ---------------------------------------------------------------
             WRITE_HIGH: begin
+                _nxt_sda_o = 1;
                 if (scl_rising_edge)begin
                     _shifted = {_shift[6:0], SDA_OUT};
                     _nxt_count = _count + 1;
                 end
-                if (_count == 3'b111 && scl_falling_edge)begin
-                    _next_state = READ_ACK;
+                if (_count[3] && scl_falling_edge)begin
+                    _next_state = WRITE_ACK;
                 end
             end
             WRITE_ACK: begin
                 _nxt_sda_o = 0; //ACK 
                 _nxt_rd_data = {_shift, 8'b0000000};
-                if (scl_low) begin 
+                if (scl_falling_edge) begin 
                     _next_state = WRITE_LOW;
                     _nxt_count = 3'b000;
                 end
@@ -141,7 +144,7 @@ wire scl_high= (SCL == 1 && scl_past == 1);
                     _shifted = {_shift[6:0], SDA_OUT};
                     _nxt_count = _count + 1;
                 end
-                if (_count == 3'b111 && scl_falling_edge)begin
+                if (_count[3] && scl_falling_edge)begin
                     _next_state = LAST_ACK;
                 end
             end
@@ -152,6 +155,7 @@ wire scl_high= (SCL == 1 && scl_past == 1);
                 _nxt_sda_o = 1;   
             end
         endcase
+        if (stop) _next_state = IDLE;
     end
 
 
